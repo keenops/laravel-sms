@@ -15,7 +15,7 @@ composer require keenops/laravel-sms
 
 ## Usage
 
-Add beem.africa API credentials. Can be obtained here
+Add beem.africa API credentials. Can be obtained [here](https://beem.africa/beem-api/)
 
 ```bash
     BEEM_API_KEY=
@@ -59,7 +59,7 @@ If you discover any security related issues, please email git@kimwalu.com instea
 
 ## Credits
 
--   [Kimwalu](https://github.com/keenops)
+-   [Kimwalu](https://kimwalu.com)
 -   [All Contributors](../../contributors)
 
 ## License
