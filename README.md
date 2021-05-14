@@ -2,7 +2,6 @@
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/keenops/laravel-sms.svg?style=flat-square)](https://packagist.org/packages/keenops/laravel-sms)
 [![Total Downloads](https://img.shields.io/packagist/dt/keenops/laravel-sms.svg?style=flat-square)](https://packagist.org/packages/keenops/laravel-sms)
-![GitHub Actions](https://github.com/keenops/laravel-sms/actions/workflows/main.yml/badge.svg)
 
 This package makes it easy to send messages using Beem.africa with Laravel.It  is basicly a wrapper around their API. 
 
@@ -17,6 +16,7 @@ composer require keenops/laravel-sms
 ## Usage
 
 Add beem.africa API credentials. Can be obtained here
+
 ```bash
     BEEM_API_KEY=
     BEEM_API_SECRET=
