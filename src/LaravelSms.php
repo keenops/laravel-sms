@@ -11,6 +11,7 @@ class LaravelSms
 
         $receiveres = array();
         foreach ($recipients as $index => $recipient) {
+            $recipient = str_replace([' ', '-', '+'], '', $recipient);
             if (strlen($recipient) == 9) {
                 $recipient = '255' . substr($recipient, 0);
             } elseif (strlen($recipient) == 10) {
@@ -21,8 +22,6 @@ class LaravelSms
                 'dest_addr' => $recipient,
             );
         }
-
-        return $receiveres;
 
         $response = Http::withOptions([
             'verify' => false,

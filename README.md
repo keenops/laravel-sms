@@ -1,4 +1,4 @@
-# Very short description of the package
+# Beem.africa SMS package for Laravel
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/keenops/laravel-sms.svg?style=flat-square)](https://packagist.org/packages/keenops/laravel-sms)
 [![Total Downloads](https://img.shields.io/packagist/dt/keenops/laravel-sms.svg?style=flat-square)](https://packagist.org/packages/keenops/laravel-sms)
@@ -17,13 +17,20 @@ composer require keenops/laravel-sms
 ## Usage
 
 ```php
+namespace App\Http\Controllers;
 
-```
+use Keenops\LaravelSms\LaravelSms;
 
-### Testing
-
-```bash
-composer test
+class TextController extends Controller
+{
+    public function index()
+    {
+        $message = "Hello Word"; //String
+        
+        $receipients = [255717599994, 0717599994, 717599994, '255717599994', '0717599994', '717599999', '+255 717 599-994', '0717  599  994']; //recipients is an array of receiver nuumber in integers like 7255717599994, 0717599994 and 717599994 or strings like '255717599994', '0717599994', '717599999', '+255 717 599-994', and '0717  599  994',
+        LaravelSms::send($message, $recipients);
+    }
+}
 ```
 
 ### Changelog
