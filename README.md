@@ -16,6 +16,15 @@ composer require keenops/laravel-sms
 
 ## Usage
 
+Add beem.africa API credentials. Can be obtained here
+```bash
+    BEEM_API_KEY=
+    BEEM_API_SECRET=
+    BEEM_SENDER_NAME=
+```
+
+In your controller use like this
+
 ```php
 namespace App\Http\Controllers;
 
@@ -28,10 +37,10 @@ class TextController extends Controller
         $message = "Hello Word"; //String
         
         $receipients = [255717599994, '+255 717 599-994', '0717  599  994']; 
-        //recipients is an array of receiver nuumber in integers like 7255717599994, 0717599994 and 717599994 
-        //or strings like '255717599994', '0717599994', '717599999', '+255-717-599-994', and '0717  599  994',
+        //recipients is an array of receiver nuumber in integers like 255717599994, and 717599994 
+        //or strings like '255717599994', '0717599994', '717599999', '+255-717-599-994', and '0717 599 994',
         
-        LaravelSms::send($message, $recipients);
+        return LaravelSms::send($message, $recipients);
     }
 }
 ```
