@@ -29,7 +29,8 @@ class LaravelSms
             config('laravel-sms.beem_api_key'),
             config('laravel-sms.beem_api_secret')
         )->withHeaders([
-            'Content-Type:application/json',
+            'Accept' => 'application/json',
+            'content-type' => 'application/json' 
         ])->post('https://apisms.beem.africa/v1/send', array(
             'source_addr' => config('laravel-sms.beem_sender_name'),
             'schedule_time' => '',
