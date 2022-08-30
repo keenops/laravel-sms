@@ -10,7 +10,7 @@ This package makes it easy to send messages using Beem.africa with Laravel.It  i
 You can install the package via composer:
 
 ```bash
-composer require keenops/laravel-beem-sms
+composer require keenops/laravel-sms
 ```
 After installation, publish the configuration files by running the command:
 
