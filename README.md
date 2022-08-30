@@ -1,7 +1,7 @@
 # Beem.africa SMS package for Laravel
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/keenops/laravel-beem-sms.svg?style=flat-square)](https://packagist.org/packages/keenops/laravel-beem-sms)
-[![Total Downloads](https://img.shields.io/packagist/dt/keenops/laravel-beem-sms.svg?style=flat-square)](https://packagist.org/packages/keenops/laravel-beem-sms)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/keenops/laravel-sms.svg?style=flat-square)](https://packagist.org/packages/keenops/laravel-sms)
+[![Total Downloads](https://img.shields.io/packagist/dt/keenops/laravel-sms.svg?style=flat-square)](https://packagist.org/packages/keenops/laravel-sms)
 
 This package makes it easy to send messages using Beem.africa with Laravel.It  is basicly a wrapper around their API. 
 
