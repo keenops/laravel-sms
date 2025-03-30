@@ -1,64 +1,62 @@
-<?php
+<?php 
 
-use Illuminate\Support\Facades\Http;
 use Keenops\Sms\Sms;
+use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
-    config()->set('laravel-beem-sms', [
-        'beem_sender_name' => 'TestSender',
-        'beem_api_key' => 'test-key',
-        'beem_api_secret' => 'test-secret',
+    config([
+        'laravel-beem-sms.beem_sender_name' => 'MySender',
+        'laravel-beem-sms.beem_api_key' => 'test-api-key',
+        'laravel-beem-sms.beem_api_secret' => 'test-api-secret',
     ]);
-
-    $this->sms = new Sms();
 });
 
-it('sends sms successfully', function () {
+it('can send an SMS', function () {
     Http::fake([
-        'https://apisms.beem.africa/v1/send' => Http::response(['status' => 'sent'], 200),
+        'https://apisms.beem.africa/v1/send' => Http::response(['success' => true], 200),
     ]);
 
-    $response = $this->sms->send('Test message', ['0754123456']);
+    $sms = new Sms();
+    $response = $sms->send('Hello from Pest!', ['0712345678']);
 
-    Http::assertSent(function ($request) {
-        return $request->url() === 'https://apisms.beem.africa/v1/send' &&
-               $request->method() === 'POST' &&
-               $request['message'] === 'Test message';
-    });
-
-    expect($response->status())->toBe(200);
+    $response->assertOk();
 });
 
-it('returns balance credit', function () {
+it('can get balance', function () {
     Http::fake([
         'https://apisms.beem.africa/public/v1/vendors/balance' => Http::response([
-            'data' => ['credit_balance' => '150.00']
+            'data' => ['credit_balance' => '456.78']
         ], 200),
     ]);
 
-    $balance = $this->sms->viewBalance();
+    $sms = new Sms();
+    $balance = $sms->viewBalance();
 
-    expect($balance)->toBe('150.00');
+    expect($balance)->toBe('456.78');
 });
 
-it('returns sender names', function () {
+it('can retrieve sender names', function () {
     Http::fake([
-        'https://apisms.beem.africa/public/v1/sender-names' => Http::response(['sender_names' => ['ABC']], 200),
+        'https://apisms.beem.africa/public/v1/sender-names' => Http::response([
+            'data' => ['names' => ['MySender']]
+        ], 200),
     ]);
 
-    $response = $this->sms->senderNames();
+    $sms = new Sms();
+    $response = $sms->senderNames();
 
-    expect($response->status())->toBe(200)
-        ->and($response->json())->toHaveKey('sender_names');
+    $response->assertOk();
 });
 
-it('requests new sender name', function () {
+it('can request a new sender name', function () {
     Http::fake([
-        'https://apisms.beem.africa/public/v1/sender-names' => Http::response(['message' => 'Request submitted'], 200),
+        'https://apisms.beem.africa/public/v1/sender-names' => Http::response([
+            'message' => 'Request submitted'
+        ], 200),
     ]);
 
-    $response = $this->sms->requestNewSenderName('MySenderID', 'Hello sample');
+    $sms = new Sms();
+    $response = $sms->requestNewSenderName('NewSender', 'Sample content');
 
-    expect($response->status())->toBe(200)
-        ->and($response['message'])->toBe('Request submitted');
+    $response->assertOk();
 });

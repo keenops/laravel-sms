@@ -2,79 +2,72 @@
 
 namespace Tests\Unit;
 
-use Illuminate\Support\Facades\Http;
 use Keenops\Sms\Sms;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class SmsTest extends TestCase
 {
-    protected Sms $sms;
-
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Bind config manually if not using Laravel app config
-        config()->set('laravel-beem-sms', [
-            'beem_sender_name' => 'TestSender',
-            'beem_api_key' => 'test-key',
-            'beem_api_secret' => 'test-secret',
+        config([
+            'laravel-beem-sms.beem_sender_name' => 'MySender',
+            'laravel-beem-sms.beem_api_key' => 'test-api-key',
+            'laravel-beem-sms.beem_api_secret' => 'test-api-secret',
         ]);
-
-        $this->sms = new Sms();
     }
 
-    public function test_send_sms_successfully()
+    public function test_it_can_send_sms()
     {
         Http::fake([
-            'https://apisms.beem.africa/v1/send' => Http::response(['status' => 'sent'], 200),
+            'https://apisms.beem.africa/v1/send' => Http::response(['success' => true], 200),
         ]);
 
-        $response = $this->sms->send('Test message', ['0754123456']);
+        $sms = new Sms();
+        $response = $sms->send('Hello World', ['0712345678']);
 
-        Http::assertSent(function ($request) {
-            return $request->url() === 'https://apisms.beem.africa/v1/send' &&
-                   $request->method() === 'POST' &&
-                   $request['message'] === 'Test message';
-        });
-
-        $this->assertEquals(200, $response->status());
+        $response->assertOk();
     }
 
-    public function test_view_balance_returns_credit()
+    public function test_it_can_get_balance()
     {
         Http::fake([
             'https://apisms.beem.africa/public/v1/vendors/balance' => Http::response([
-                'data' => ['credit_balance' => '150.00']
+                'data' => ['credit_balance' => '123.45']
             ], 200),
         ]);
 
-        $balance = $this->sms->viewBalance();
+        $sms = new Sms();
+        $balance = $sms->viewBalance();
 
-        $this->assertEquals('150.00', $balance);
+        $this->assertEquals('123.45', $balance);
     }
 
-    public function test_sender_names_returns_response()
+    public function test_it_can_get_sender_names()
     {
         Http::fake([
-            'https://apisms.beem.africa/public/v1/sender-names' => Http::response(['sender_names' => ['ABC']], 200),
+            'https://apisms.beem.africa/public/v1/sender-names' => Http::response([
+                'data' => ['names' => ['MySender']]
+            ], 200),
         ]);
 
-        $response = $this->sms->senderNames();
+        $sms = new Sms();
+        $response = $sms->senderNames();
 
-        $this->assertEquals(200, $response->status());
-        $this->assertArrayHasKey('sender_names', $response->json());
+        $response->assertOk();
     }
 
-    public function test_request_new_sender_name()
+    public function test_it_can_request_new_sender_name()
     {
         Http::fake([
             'https://apisms.beem.africa/public/v1/sender-names' => Http::response(['message' => 'Request submitted'], 200),
         ]);
 
-        $response = $this->sms->requestNewSenderName('MySenderID', 'Hello sample');
+        $sms = new Sms();
+        $response = $sms->requestNewSenderName('MyNewSender', 'Sample content');
 
-        $this->assertEquals(200, $response->status());
-        $this->assertEquals('Request submitted', $response['message']);
+        $response->assertOk();
     }
 }

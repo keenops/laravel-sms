@@ -3,6 +3,8 @@
 namespace Keenops\Sms;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Client\RequestException;
+use Exception;
 
 class Sms
 {
@@ -29,9 +31,13 @@ class Sms
             self::$config = config('laravel-beem-sms');
         }
 
-        $this->senderName = self::$config['beem_sender_name'];
-        $this->apiKey = self::$config['beem_api_key'];
-        $this->apiSecret = self::$config['beem_api_secret'];
+        try {
+            $this->senderName = self::$config['beem_sender_name'];
+            $this->apiKey = self::$config['beem_api_key'];
+            $this->apiSecret = self::$config['beem_api_secret'];
+        } catch (Exception $e) {
+            throw new Exception("Failed to load SMS configuration: " . $e->getMessage());
+        }
     }
 
     /**
@@ -40,39 +46,54 @@ class Sms
      * @param string $message
      * @param array $recipients
      * @return \Illuminate\Http\Client\Response
+     * @throws Exception
      */
     public function send(string $message, array $recipients)
     {
-        $payload = [
-            'source_addr' => $this->senderName,
-            'schedule_time' => '',
-            'encoding' => 0,
-            'message' => $message,
-            'recipients' => $this->formatRecipients($recipients),
-        ];
+        try {
+            $payload = [
+                'source_addr' => $this->senderName,
+                'schedule_time' => '',
+                'encoding' => 0,
+                'message' => $message,
+                'recipients' => $this->formatRecipients($recipients),
+            ];
 
-        return $this->makeRequest('post', 'https://apisms.beem.africa/v1/send', $payload);
+            return $this->makeRequest('post', 'https://apisms.beem.africa/v1/send', $payload);
+        } catch (Exception $e) {
+            throw new Exception('Failed to send SMS: ' . $e->getMessage());
+        }
     }
 
     /**
      * Retrieves the current SMS credit balance.
      *
      * @return string
+     * @throws Exception
      */
     public function viewBalance(): string
     {
-        $response = $this->makeRequest('get', self::BASE_URL . '/vendors/balance');
-        return json_decode($response)->data->credit_balance;
+        try {
+            $response = $this->makeRequest('get', self::BASE_URL . '/vendors/balance');
+            return json_decode($response)->data->credit_balance ?? 'N/A';
+        } catch (Exception $e) {
+            throw new Exception('Failed to fetch balance: ' . $e->getMessage());
+        }
     }
 
     /**
      * Gets all sender names associated with your Beem account.
      *
      * @return \Illuminate\Http\Client\Response
+     * @throws Exception
      */
     public function senderNames()
     {
-        return $this->makeRequest('get', self::BASE_URL . '/sender-names');
+        try {
+            return $this->makeRequest('get', self::BASE_URL . '/sender-names');
+        } catch (Exception $e) {
+            throw new Exception('Failed to fetch sender names: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -81,19 +102,24 @@ class Sms
      * @param string $senderName
      * @param string $sampleContent
      * @return \Illuminate\Http\Client\Response
+     * @throws Exception
      */
     public function requestNewSenderName(string $senderName, string $sampleContent)
     {
-        $payload = [
-            'senderid' => $senderName,
-            'sample_content' => $sampleContent,
-        ];
+        try {
+            $payload = [
+                'senderid' => $senderName,
+                'sample_content' => $sampleContent,
+            ];
 
-        return $this->makeRequest('post', self::BASE_URL . '/sender-names', $payload);
+            return $this->makeRequest('post', self::BASE_URL . '/sender-names', $payload);
+        } catch (Exception $e) {
+            throw new Exception('Failed to request new sender name: ' . $e->getMessage());
+        }
     }
 
     /**
-     * Helper method to format recipients into API-required structure.
+     * Formats recipient numbers into Beem-required structure.
      *
      * @param array $recipients
      * @return array
@@ -118,22 +144,35 @@ class Sms
     }
 
     /**
-     * Generalized HTTP request with Beem authentication and headers.
+     * Makes an authenticated HTTP request to the Beem API.
      *
-     * @param string $method  HTTP verb: get|post
-     * @param string $url     Endpoint URL
-     * @param array|null $payload  Optional request body
+     * @param string $method
+     * @param string $url
+     * @param array|null $payload
      * @return \Illuminate\Http\Client\Response
+     * @throws Exception
      */
     private function makeRequest(string $method, string $url, ?array $payload = null)
     {
-        $client = Http::withOptions(['verify' => false])
-            ->withBasicAuth($this->apiKey, $this->apiSecret)
-            ->withHeaders([
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
-            ]);
+        try {
+            $client = Http::withOptions(['verify' => false])
+                ->withBasicAuth($this->apiKey, $this->apiSecret)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ]);
 
-        return $method === 'post' ? $client->post($url, $payload) : $client->get($url);
+            $response = $method === 'post'
+                ? $client->post($url, $payload)
+                : $client->get($url);
+
+            $response->throw(); // Ensure HTTP errors are caught
+
+            return $response;
+        } catch (RequestException $e) {
+            throw new Exception("Beem API request failed: " . $e->getMessage(), $e->getCode(), $e);
+        } catch (Exception $e) {
+            throw new Exception("Unexpected error during Beem API request: " . $e->getMessage(), $e->getCode(), $e);
+        }
     }
 }
