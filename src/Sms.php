@@ -7,165 +7,133 @@ use Illuminate\Support\Facades\Http;
 class Sms
 {
     /**
-     * The configuration.
-     *
-     * @var array|null
+     * Base URL for Beem API.
+     */
+    private const BASE_URL = 'https://apisms.beem.africa/public/v1';
+
+    /**
+     * Configuration array loaded from config file.
      */
     private static ?array $config = null;
 
-    /**
-     * The sender name.
-     *
-     * @var string
-     */
-    private string $sender_name;
+    private string $senderName;
+    private string $apiKey;
+    private string $apiSecret;
 
     /**
-     * The API key.
-     *
-     * @var string
+     * Sms constructor initializes config only once.
      */
-    private string $key;
-
-    /**
-     * The API secret.
-     *
-     * @var string
-     */
-    private string $secret;
-
-    /**
-     * Create a new Sms instance.
-     */
-    public function __construct() {
+    public function __construct()
+    {
         if (self::$config === null) {
             self::$config = config('laravel-beem-sms');
         }
 
-        $this->sender_name = self::$config['beem_sender_name'];
-        $this->key = self::$config['beem_api_key'];
-        $this->secret = self::$config['beem_api_secret'];
+        $this->senderName = self::$config['beem_sender_name'];
+        $this->apiKey = self::$config['beem_api_key'];
+        $this->apiSecret = self::$config['beem_api_secret'];
     }
 
     /**
-     * Prepare the recipients array.
+     * Sends an SMS message to one or more recipients.
+     *
+     * @param string $message
+     * @param array $recipients
+     * @return \Illuminate\Http\Client\Response
+     */
+    public function send(string $message, array $recipients)
+    {
+        $payload = [
+            'source_addr' => $this->senderName,
+            'schedule_time' => '',
+            'encoding' => 0,
+            'message' => $message,
+            'recipients' => $this->formatRecipients($recipients),
+        ];
+
+        return $this->makeRequest('post', 'https://apisms.beem.africa/v1/send', $payload);
+    }
+
+    /**
+     * Retrieves the current SMS credit balance.
+     *
+     * @return string
+     */
+    public function viewBalance(): string
+    {
+        $response = $this->makeRequest('get', self::BASE_URL . '/vendors/balance');
+        return json_decode($response)->data->credit_balance;
+    }
+
+    /**
+     * Gets all sender names associated with your Beem account.
+     *
+     * @return \Illuminate\Http\Client\Response
+     */
+    public function senderNames()
+    {
+        return $this->makeRequest('get', self::BASE_URL . '/sender-names');
+    }
+
+    /**
+     * Requests a new sender name for your Beem account.
+     *
+     * @param string $senderName
+     * @param string $sampleContent
+     * @return \Illuminate\Http\Client\Response
+     */
+    public function requestNewSenderName(string $senderName, string $sampleContent)
+    {
+        $payload = [
+            'senderid' => $senderName,
+            'sample_content' => $sampleContent,
+        ];
+
+        return $this->makeRequest('post', self::BASE_URL . '/sender-names', $payload);
+    }
+
+    /**
+     * Helper method to format recipients into API-required structure.
      *
      * @param array $recipients
      * @return array
      */
-    private function prepareRecipients(array $recipients): array
+    private function formatRecipients(array $recipients): array
     {
-        $receivers = array();
-        foreach ($recipients as $index => $recipient) {
-            $recipient = str_replace([' ', '-', '+'], '', $recipient);
-            if (strlen($recipient) == 9) {
-                $recipient = '255' . substr($recipient, 0);
-            } elseif (strlen($recipient) == 10) {
-                $recipient = '255' . substr($recipient, 1);
+        return array_map(function ($recipient, $index) {
+            $clean = str_replace([' ', '-', '+'], '', $recipient);
+            $length = strlen($clean);
+
+            if ($length === 9) {
+                $clean = '255' . $clean;
+            } elseif ($length === 10) {
+                $clean = '255' . substr($clean, 1);
             }
-            $receivers[] = array(
+
+            return [
                 'recipient_id' => $index,
-                'dest_addr' => $recipient,
-            );
-        }
-
-        return $receivers;
+                'dest_addr' => $clean,
+            ];
+        }, $recipients, array_keys($recipients));
     }
 
     /**
-     * Send sms to single or multiple recipients.
+     * Generalized HTTP request with Beem authentication and headers.
      *
-     * @param String $message
-     * @param array $recipients
-     * 
-     * @return json
+     * @param string $method  HTTP verb: get|post
+     * @param string $url     Endpoint URL
+     * @param array|null $payload  Optional request body
+     * @return \Illuminate\Http\Client\Response
      */
-    public function send(string $message, array $recipients)
+    private function makeRequest(string $method, string $url, ?array $payload = null)
     {
-        $receivers = $this->prepareRecipients($recipients);
+        $client = Http::withOptions(['verify' => false])
+            ->withBasicAuth($this->apiKey, $this->apiSecret)
+            ->withHeaders([
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ]);
 
-        $response = Http::withOptions([
-            'verify' => false,
-        ])->withBasicAuth(
-            $this->key,
-            $this->secret
-        )->withHeaders([
-            'Accept' => 'application/json',
-            'content-type' => 'application/json' 
-        ])->post('https://apisms.beem.africa/v1/send', array(
-            'source_addr' => $this->sender_name,
-            'schedule_time' => '',
-            'encoding'  => 0,
-            'message' => $message,
-            'recipients' => $receivers,
-        ));
-
-        return $response;
-    }
-
-    /**
-     * See how many messages are left in your account
-     * @return string
-     */
-    public function viewBalance()
-    {
-        $response = Http::withOptions([
-            'verify' => false,
-        ])->withBasicAuth(
-            $this->key,
-            $this->secret
-        )->withHeaders([
-            'Accept' => 'application/json',
-            'content-type' => 'application/json' 
-        ])->get('https://apisms.beem.africa/public/v1/vendors/balance');
-
-        $response = json_decode($response)->data->credit_balance;
-
-        return $response;
-    }
-
-    /**
-     * Find a list of sender names associated with your beem account
-     * @return string
-     */
-    public function senderNames()
-    {
-        $response = Http::withOptions([
-            'verify' => false,
-        ])->withBasicAuth(
-            $this->key,
-            $this->secret
-        )->withHeaders([
-            'Accept' => 'application/json',
-            'content-type' => 'application/json' 
-        ])->get('https://apisms.beem.africa/public/v1/sender-names');
-
-        return $response;
-    }
-
-    /**
-     * Send sms to single or multiple recipients.
-     *
-     * @param String $senderName; desired name for sender id, Name will show as from on sms
-     * @param string $sampleContent; an example of message that will be sent using this sender name
-     * 
-     * @return json
-     */
-    public function requestNewSenderName(String $senderName, String $sampleContent)
-    {
-        $response = Http::withOptions([
-            'verify' => false,
-        ])->withBasicAuth(
-            $this->key,
-            $this->secret
-        )->withHeaders([
-            'Accept' => 'application/json',
-            'content-type' => 'application/json' 
-        ])->post('https://apisms.beem.africa/public/v1/sender-names', array(
-            'senderid' => $senderName,
-            'sample_content' => $sampleContent
-        ));
-
-        return $response;
+        return $method === 'post' ? $client->post($url, $payload) : $client->get($url);
     }
 }
