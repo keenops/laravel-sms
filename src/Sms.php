@@ -6,15 +6,70 @@ use Illuminate\Support\Facades\Http;
 
 class Sms
 {
-    private $sender_name;
-    private $key;
-    private $secret;
+    /**
+     * The configuration.
+     *
+     * @var array|null
+     */
+    private static ?array $config = null;
 
-    
+    /**
+     * The sender name.
+     *
+     * @var string
+     */
+    private string $sender_name;
+
+    /**
+     * The API key.
+     *
+     * @var string
+     */
+    private string $key;
+
+    /**
+     * The API secret.
+     *
+     * @var string
+     */
+    private string $secret;
+
+    /**
+     * Create a new Sms instance.
+     */
     public function __construct() {
-        $this->sender_name = config('laravel-beem-sms.beem_sender_name');
-        $this->key = config('laravel-beem-sms.beem_api_key');
-        $this->secret = config('laravel-beem-sms.beem_api_secret');
+        if (self::$config === null) {
+            self::$config = config('laravel-beem-sms');
+        }
+
+        $this->sender_name = self::$config['beem_sender_name'];
+        $this->key = self::$config['beem_api_key'];
+        $this->secret = self::$config['beem_api_secret'];
+    }
+
+    /**
+     * Prepare the recipients array.
+     *
+     * @param array $recipients
+     * @return array
+     */
+    private function prepareRecipients(array $recipients): array
+    {
+        $receivers = array();
+        foreach ($recipients as $index => $recipient) {
+            $recipient = str_replace([' ', '-', '+'], '', $recipient);
+            if (strlen($recipient) == 9) {
+                $recipient = '255' . substr($recipient, 0);
+            } elseif (strlen($recipient) == 10) {
+                $recipient = '255' . substr($recipient, 1);
+            }
+            $receivers[] = array(
+                'recipient_id' => $index,
+                'dest_addr' => $recipient,
+            );
+        }
+
+        return $receivers;
     }
 
     /**
@@ -27,19 +82,7 @@ class Sms
      */
     public function send(string $message, array $recipients)
     {
-        $receivers = array();
-        foreach ($recipients as $index => $recipient) {
-            $recipient = str_replace([' ', '-', '+'], '', $recipient);
-            if (strlen($recipient) == 9) {
-                $recipient = '255' . substr($recipient, 0);
-            } elseif (strlen($recipient) == 10) {
-                $recipient = '255' . substr($recipient, 1);
-            }
-            $receivers[] = $list[] = array(
-                'recipient_id' => $index,
-                'dest_addr' => $recipient,
-            );
-        }
+        $receivers = $this->prepareRecipients($recipients);
 
         $response = Http::withOptions([
             'verify' => false,
@@ -76,7 +119,9 @@ class Sms
             'content-type' => 'application/json' 
         ])->get('https://apisms.beem.africa/public/v1/vendors/balance');
 
-        return json_decode($response)->data->credit_balance;
+        $response = json_decode($response)->data->credit_balance;
+
+        return $response;
     }
 
     /**
@@ -98,7 +143,7 @@ class Sms
         return $response;
     }
 
-     /**
+    /**
      * Send sms to single or multiple recipients.
      *
      * @param String $senderName; desired name for sender id, Name will show as from on sms
