@@ -1,7 +1,13 @@
 {
     "name": "keenops/laravel-beem-sms",
     "description": "This package makes easy user of beem.africa API to send sms from laravel applications.",
+    "keywords": [
+        "keenops",
+        "laravel-sms"
+    ],
+    "homepage": "https://github.com/keenops/laravel-sms",
     "license": "MIT",
+    "type": "library",
     "authors": [
         {
             "name": "Kee Nops",
